@@ -47,6 +47,7 @@ services:
   # EVOLUTION API - WhatsApp API
   # ====================================
   evolution-api:
+    # IMAGEM MAIS RECENTE E ESTÁVEL
     image: atendai/evolution-api:latest
     container_name: evolution-api
     restart: unless-stopped
@@ -62,7 +63,21 @@ services:
       SERVER_TYPE: ${SERVER_TYPE:-http}
       SERVER_PORT: 8080
       SERVER_URL: ${SERVER_URL:-http://localhost:8080}
-      SERVER_CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      
+      # ========== FIX WHATSAPP WEB VERSÃO ATUAL (DEZEMBRO 2024) ==========
+      # VERSÃO ATUALIZADA DO WHATSAPP WEB
+      CONFIG_SESSION_PHONE_CLIENT: Evolution
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      WA_VERSION: 2.3000.1028000487
+      WA_VERSION_BAILEYS: 6.7.0
+      WA_BROWSER_ID: Chrome/131.0.0.0
+      WA_BROWSER_NAME: Chrome
+      WA_OS: Windows
+      
+      # ========== CONFIGURAÇÕES DE CORS ==========
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      CORS_METHODS: POST,GET,PUT,DELETE
+      CORS_CREDENTIALS: true
       
       # ========== CONFIGURAÇÕES DE LOG ==========
       LOG_LEVEL: ${LOG_LEVEL:-ERROR,WARN,INFO}
@@ -88,7 +103,7 @@ services:
       CACHE_REDIS_SAVE_INSTANCES: false
       CACHE_LOCAL_ENABLED: false
       
-      # ========== CONFIGURAÇÕES DO RABBITMQ (Desabilitado) ==========
+      # ========== CONFIGURAÇÕES DO RABBITMQ ==========
       RABBITMQ_ENABLED: false
       
       # ========== CONFIGURAÇÕES DO WEBSOCKET ==========
@@ -127,6 +142,24 @@ services:
       # ========== CONFIGURAÇÕES DE MENSAGEM ==========
       MESSAGE_READ: ${MESSAGE_READ:-false}
       MESSAGE_SYNC_HISTORY: ${MESSAGE_SYNC_HISTORY:-true}
+      REJECT_CALL: ${REJECT_CALL:-false}
+      AUTO_DOWNLOAD: ${AUTO_DOWNLOAD:-false}
+      IGNORE_GROUP_MESSAGES: ${IGNORE_GROUP_MESSAGES:-false}
+      
+      # ========== CONFIGURAÇÕES DE CONEXÃO ==========
+      CONNECTION_MODE: qrcode
+      SYNC_FULL_HISTORY: false
+      RECONNECT_INTERVAL: 5000
+      MAX_RECONNECT_ATTEMPTS: 5
+      
+      # ========== CONFIGURAÇÕES DE ARMAZENAMENTO ==========
+      STORE_MESSAGES: true
+      STORE_MESSAGE_UP: true
+      STORE_CONTACTS: true
+      CLEAN_STORE_CLEANING_INTERVAL: 7200
+      CLEAN_STORE_MESSAGES: true
+      CLEAN_STORE_MESSAGE_UP: true
+      CLEAN_STORE_CONTACTS: true
       
       # ========== CONFIGURAÇÕES GLOBAIS DE WEBHOOK ==========
       WEBHOOK_GLOBAL_URL: ${WEBHOOK_GLOBAL_URL:-}
@@ -157,34 +190,6 @@ services:
       APP_NAME: ${APP_NAME:-Evolution API}
       NODE_ENV: ${NODE_ENV:-production}
       TZ: ${TIMEZONE:-America/Sao_Paulo}
-
-      # ========== CORREÇÃO WHATSAPP WEB ==========
-      # Forçar versão mais recente do WhatsApp Web
-      CONFIG_SESSION_PHONE_CLIENT: "Evolution API"
-      CONFIG_SESSION_PHONE_NAME: "Chrome"
-  
-      # Configurações do Baileys
-      REJECT_CALL: false
-      MESSAGE_READ: false
-      AUTO_DOWNLOAD: false
-      IGNORE_GROUP_MESSAGES: false
-  
-      # Modo de conexão
-      CONNECTION_MODE: "qrcode"
-      SYNC_FULL_HISTORY: false
-  
-      # Timeout e reconexão
-      RECONNECT_INTERVAL: 5000
-      MAX_RECONNECT_ATTEMPTS: 5
-  
-      # Cache e Store
-      STORE_MESSAGES: true
-      STORE_MESSAGE_UP: true
-      STORE_CONTACTS: true
-      CLEAN_STORE_CLEANING_INTERVAL: 7200
-      CLEAN_STORE_MESSAGES: true
-      CLEAN_STORE_MESSAGE_UP: true
-      CLEAN_STORE_CONTACTS: true
       
     depends_on:
       evolution-postgres:
