@@ -1,0 +1,186 @@
+version: '3.8'
+
+services:
+  # ====================================
+  # POSTGRESQL - Banco de Dados Principal
+  # ====================================
+  evolution-postgres:
+    image: postgres:15-alpine
+    container_name: evolution-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-evolution}
+      POSTGRES_USER: ${POSTGRES_USER:-evolution}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-evolution2025}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - evolution-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-evolution}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ====================================
+  # REDIS - Cache e Filas
+  # ====================================
+  evolution-redis:
+    image: redis:7-alpine
+    container_name: evolution-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --port ${REDIS_PORT:-6379}
+      --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - evolution-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ====================================
+  # EVOLUTION API - WhatsApp API
+  # ====================================
+  evolution-api:
+    image: atendai/evolution-api:v2.1.1
+    container_name: evolution-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - evolution-instances:/evolution/instances
+      - evolution-store:/evolution/store
+    networks:
+      - evolution-network
+    environment:
+      # ========== CONFIGURAÇÕES DO SERVIDOR ==========
+      SERVER_TYPE: ${SERVER_TYPE:-http}
+      SERVER_PORT: 8080
+      SERVER_URL: ${SERVER_URL:-http://localhost:8080}
+      SERVER_CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      
+      # ========== CONFIGURAÇÕES DE LOG ==========
+      LOG_LEVEL: ${LOG_LEVEL:-ERROR,WARN,INFO}
+      LOG_COLOR: ${LOG_COLOR:-true}
+      LOG_BAILEYS: ${LOG_BAILEYS:-error}
+      
+      # ========== CONFIGURAÇÕES DO BANCO DE DADOS ==========
+      DATABASE_ENABLED: true
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://${POSTGRES_USER:-evolution}:${POSTGRES_PASSWORD:-evolution2025}@evolution-postgres:5432/${POSTGRES_DB:-evolution}?schema=public
+      DATABASE_SAVE_DATA_INSTANCE: true
+      DATABASE_SAVE_DATA_NEW_MESSAGE: true
+      DATABASE_SAVE_MESSAGE_UPDATE: true
+      DATABASE_SAVE_DATA_CONTACTS: true
+      DATABASE_SAVE_DATA_CHATS: true
+      DATABASE_SAVE_DATA_LABELS: true
+      DATABASE_SAVE_DATA_HISTORIC: true
+      
+      # ========== CONFIGURAÇÕES DO REDIS ==========
+      CACHE_REDIS_ENABLED: true
+      CACHE_REDIS_URI: redis://evolution-redis:${REDIS_PORT:-6379}/1
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_REDIS_SAVE_INSTANCES: false
+      CACHE_LOCAL_ENABLED: false
+      
+      # ========== CONFIGURAÇÕES DO RABBITMQ (Desabilitado) ==========
+      RABBITMQ_ENABLED: false
+      
+      # ========== CONFIGURAÇÕES DO WEBSOCKET ==========
+      WEBSOCKET_ENABLED: ${WEBSOCKET_ENABLED:-false}
+      WEBSOCKET_GLOBAL_EVENTS: ${WEBSOCKET_GLOBAL_EVENTS:-false}
+      
+      # ========== CONFIGURAÇÕES DO S3 (Opcional) ==========
+      S3_ENABLED: ${S3_ENABLED:-false}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_PORT: ${S3_PORT:-}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_REGION: ${S3_REGION:-}
+      S3_USE_SSL: ${S3_USE_SSL:-true}
+      
+      # ========== CONFIGURAÇÕES DE AUTENTICAÇÃO ==========
+      AUTHENTICATION_TYPE: ${AUTH_TYPE:-apikey}
+      AUTHENTICATION_API_KEY: ${API_KEY:-MUDE-ESTA-CHAVE-AGORA}
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: ${AUTH_EXPOSE:-true}
+      
+      # ========== CONFIGURAÇÕES DE INSTÂNCIA ==========
+      INSTANCE_EXPIRE_TOKEN: ${INSTANCE_EXPIRE_TOKEN:-0}
+      INSTANCE_NAME: ${INSTANCE_NAME:-evolution}
+      INSTANCE_WEBHOOK_URL: ${INSTANCE_WEBHOOK_URL:-}
+      INSTANCE_WEBHOOK_ENABLED: ${INSTANCE_WEBHOOK_ENABLED:-false}
+      INSTANCE_WEBHOOK_EVENTS: ${INSTANCE_WEBHOOK_EVENTS:-}
+      INSTANCE_CHATWOOT_ACCOUNT_ID: ${CHATWOOT_ACCOUNT_ID:-}
+      INSTANCE_CHATWOOT_TOKEN: ${CHATWOOT_TOKEN:-}
+      INSTANCE_CHATWOOT_URL: ${CHATWOOT_URL:-}
+      
+      # ========== CONFIGURAÇÕES DO QRCODE ==========
+      QRCODE_LIMIT: ${QRCODE_LIMIT:-30}
+      QRCODE_COLOR: ${QRCODE_COLOR:-#000000}
+      
+      # ========== CONFIGURAÇÕES DE MENSAGEM ==========
+      MESSAGE_READ: ${MESSAGE_READ:-false}
+      MESSAGE_SYNC_HISTORY: ${MESSAGE_SYNC_HISTORY:-true}
+      
+      # ========== CONFIGURAÇÕES GLOBAIS DE WEBHOOK ==========
+      WEBHOOK_GLOBAL_URL: ${WEBHOOK_GLOBAL_URL:-}
+      WEBHOOK_GLOBAL_ENABLED: ${WEBHOOK_GLOBAL_ENABLED:-false}
+      WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS: ${WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS:-false}
+      
+      # ========== CONFIGURAÇÕES DO CHATWOOT (Opcional) ==========
+      CHATWOOT_ENABLED: ${CHATWOOT_ENABLED:-false}
+      CHATWOOT_ACCOUNT_ID: ${CHATWOOT_ACCOUNT_ID:-}
+      CHATWOOT_TOKEN: ${CHATWOOT_TOKEN:-}
+      CHATWOOT_URL: ${CHATWOOT_URL:-}
+      CHATWOOT_SIGN_MSG: ${CHATWOOT_SIGN_MSG:-false}
+      CHATWOOT_REOPEN_CONVERSATION: ${CHATWOOT_REOPEN_CONVERSATION:-true}
+      CHATWOOT_CONVERSATION_PENDING: ${CHATWOOT_CONVERSATION_PENDING:-false}
+      
+      # ========== CONFIGURAÇÕES DO OPENAI (Opcional) ==========
+      OPENAI_ENABLED: ${OPENAI_ENABLED:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      
+      # ========== CONFIGURAÇÕES DO TYPEBOT (Opcional) ==========
+      TYPEBOT_ENABLED: ${TYPEBOT_ENABLED:-false}
+      TYPEBOT_API_URL: ${TYPEBOT_API_URL:-}
+      TYPEBOT_API_VERSION: ${TYPEBOT_API_VERSION:-latest}
+      TYPEBOT_KEEP_OPEN: ${TYPEBOT_KEEP_OPEN:-false}
+      TYPEBOT_EXPIRE_AFTER: ${TYPEBOT_EXPIRE_AFTER:-0}
+      
+      # ========== CONFIGURAÇÕES GERAIS ==========
+      APP_NAME: ${APP_NAME:-Evolution API}
+      NODE_ENV: ${NODE_ENV:-production}
+      TZ: ${TIMEZONE:-America/Sao_Paulo}
+      
+    depends_on:
+      evolution-postgres:
+        condition: service_healthy
+      evolution-redis:
+        condition: service_healthy
+
+# ====================================
+# REDES
+# ====================================
+networks:
+  evolution-network:
+    driver: bridge
+    name: evolution-network
+
+# ====================================
+# VOLUMES
+# ====================================
+volumes:
+  postgres-data:
+    name: evolution-postgres-data
+  redis-data:
+    name: evolution-redis-data
+  evolution-instances:
+    name: evolution-instances
+  evolution-store:
+    name: evolution-store
