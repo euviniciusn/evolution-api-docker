@@ -48,7 +48,7 @@ services:
   # ====================================
   evolution-api:
     # IMAGEM MAIS RECENTE E ESTÁVEL
-    image: gabrielpastori1/evolution-api:latest
+    image: atendai/evolution-api
     container_name: evolution-api
     restart: unless-stopped
     ports:
