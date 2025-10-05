@@ -47,7 +47,7 @@ services:
   # EVOLUTION API - WhatsApp API
   # ====================================
   evolution-api:
-    image: atendai/evolution-api:v2.1.1
+    image: atendai/evolution-api:latest
     container_name: evolution-api
     restart: unless-stopped
     ports:
@@ -157,6 +157,34 @@ services:
       APP_NAME: ${APP_NAME:-Evolution API}
       NODE_ENV: ${NODE_ENV:-production}
       TZ: ${TIMEZONE:-America/Sao_Paulo}
+
+      # ========== CORREÇÃO WHATSAPP WEB ==========
+      # Forçar versão mais recente do WhatsApp Web
+      CONFIG_SESSION_PHONE_CLIENT: "Evolution API"
+      CONFIG_SESSION_PHONE_NAME: "Chrome"
+  
+      # Configurações do Baileys
+      REJECT_CALL: false
+      MESSAGE_READ: false
+      AUTO_DOWNLOAD: false
+      IGNORE_GROUP_MESSAGES: false
+  
+      # Modo de conexão
+      CONNECTION_MODE: "qrcode"
+      SYNC_FULL_HISTORY: false
+  
+      # Timeout e reconexão
+      RECONNECT_INTERVAL: 5000
+      MAX_RECONNECT_ATTEMPTS: 5
+  
+      # Cache e Store
+      STORE_MESSAGES: true
+      STORE_MESSAGE_UP: true
+      STORE_CONTACTS: true
+      CLEAN_STORE_CLEANING_INTERVAL: 7200
+      CLEAN_STORE_MESSAGES: true
+      CLEAN_STORE_MESSAGE_UP: true
+      CLEAN_STORE_CONTACTS: true
       
     depends_on:
       evolution-postgres:
